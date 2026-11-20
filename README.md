@@ -33,9 +33,9 @@ White-paper wording:
 |---|---|---|---|---|---|
 | **delay 352** | DelRec (`alexmaxad/DelRec`), learned synaptic delays | 306,612 | 724 (incl. output LIF) | 7 | best validation |
 | **plain LIF** | PMSN (`xychen-comp/...-PMSN`), $d_{state}=1$ | 187,988 | 704 | 5 | last epoch |
-| **multi-compartment** | PMSN, $d_{state}=4$ | 200,660 | 704 | 3 | last epoch |
+| **multi-compartment** | PMSN, $d_{state}=8$ (4 complex) | 200,660 | 704 | 3 | last epoch |
 
-**Why these three**: they match the white paper's "three small SNNs on SHD" — a plain LIF baseline, a delay-trained network, and a multi-compartment network. PMSN with $d_{state}=1$ is a first-order IIR, i.e. equivalent to LIF, so it shares one codebase with the $d_{state}=4$ variant; the only architectural difference is the number of compartments.
+**Why these three**: they match the white paper's "three small SNNs on SHD" — a plain LIF baseline, a delay-trained network, and a multi-compartment network. PMSN with $d_{state}=1$ is a first-order IIR, i.e. equivalent to LIF, so it shares one codebase with the $d_{state}=8$ variant; the only architectural difference is the number of compartments.
 
 **Why PMSN uses the last epoch rather than best**: MC peaks at epoch 1 and drops ~1 point by epoch 2. Taking best would raise it by 1.5–2 points and widen the gap to LIF to 3–4 points, breaking matched accuracy.
 
@@ -306,17 +306,21 @@ $$E_{LIF+inst} = \underbrace{N_{syn} N_{spikes/syn}(\cdots)}_{\text{event-driven
 
 | T | Model | spikes | SOP | neuron ops | state acc. | buffer acc. |
 |---|---|---|---|---|---|---|
-| **50** | delay | 3,909 | 1,431,230 | 36,200 | 72,400 | 35,200 |
-| | LIF | 8,688 | 1,389,789 | 35,200 | 70,400 | 0 |
-| | MC | 9,565 | 1,533,348 | 140,800 | 281,600 | 0 |
-| **100** | delay | 7,667 | 2,804,570 | 72,400 | 144,800 | 70,400 |
-| | LIF | 13,930 | 1,808,584 | 70,400 | 140,800 | 0 |
-| | MC | 15,672 | 2,343,106 | 281,600 | 563,200 | 0 |
-| **140** | delay | 10,891 | 3,985,830 | 101,360 | 202,720 | 98,560 |
-| | LIF | 19,523 | 2,589,276 | 98,560 | 197,120 | 0 |
-| | MC | 21,026 | 2,937,174 | 394,240 | 788,480 | 0 |
+| **50** | delay | 3,909 | 4,327,995 | 36,200 | 72,400 | 35,200 |
+| **50** | LIF | 8,688 | 4,286,554 | 35,200 | 70,400 | 0 |
+| **50** | MC | 9,565 | 4,430,112 | 281,600 | 563,200 | 0 |
+| **100** | delay | 7,667 | 5,701,334 | 72,400 | 144,800 | 70,400 |
+| **100** | LIF | 13,930 | 4,705,348 | 70,400 | 140,800 | 0 |
+| **100** | MC | 15,672 | 5,239,870 | 563,200 | 1,126,400 | 0 |
+| **140** | delay | 10,891 | 6,882,594 | 101,360 | 202,720 | 98,560 |
+| **140** | LIF | 19,523 | 5,486,040 | 98,560 | 197,120 | 0 |
+| **140** | MC | 21,026 | 5,833,939 | 788,480 | 1,576,960 | 0 |
+
+**SOP includes the input → hidden1 layer (140 × 352), which the previous version omitted**: `SOP = (input events + hidden1 spikes) × 352 + hidden2 spikes × fanout`. Input events average ≈ 8,230 per inference and are identical for all three models, since all three share the same 140→352 input layer.
 
 **neuron ops = $N_{neur} \times T \times d_{state}$; state accesses = neuron ops × 2 (read + write); buffer accesses = $N_{delay} \times T \times 2$.**
+
+**MC's $d_{state}$ is 8 real values, not 4** — the PMSN state is complex, so each of the four compartments contributes a real and an imaginary part.
 
 ### 5.3 Storage bits
 
@@ -324,7 +328,9 @@ $$E_{LIF+inst} = \underbrace{N_{syn} N_{spikes/syn}(\cdots)}_{\text{event-driven
 |---|---|---|---|
 | delay | 9,811,584 | 23,168 | 14,432 |
 | LIF | 6,015,616 | 22,528 | 0 |
-| MC | 6,421,120 | 90,112 | 0 |
+| MC | 6,421,120 | **180,224** | 0 |
+
+**MC's state bits are 704 × 8 × 32 (8 real values per neuron), twice the earlier figure.**
 
 **Weights account for 99.6% of all bits and dominate leakage energy.**
 
@@ -348,103 +354,100 @@ $$E_{LIF+inst} = \underbrace{N_{syn} N_{spikes/syn}(\cdots)}_{\text{event-driven
 
 | T | Mesh | Model | synaptic | state | delay | leakage | comm | **w_read** | **total (resident)** | **total (SRAM)** | weights leak |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| **50** | 2×2 | delay | 1.455 | 0.724 | 0.352 | 0.071 | 0.044 | 14.312 | **2.646** | **16.958** | 21.417 |
-| | | LIF | 1.413 | 0.704 | 0 | 0.048 | 0.100 | 13.898 | **2.265** | **16.162** | 12.751 |
-| | | MC | 2.028 | 2.816 | 0 | 0.224 | 0.110 | 15.333 | **5.178** | **20.511** | 15.990 |
-| | 4×4 | delay | 1.455 | 0.724 | 0.352 | 0.018 | 0.299 | 14.312 | **2.847** | **17.160** | 5.354 |
-| | | LIF | 1.413 | 0.704 | 0 | 0.012 | 0.694 | 13.898 | **2.823** | **16.721** | 3.188 |
-| | | MC | 2.028 | 2.816 | 0 | 0.056 | 0.772 | 15.333 | **5.672** | **21.005** | 3.998 |
-| | 8×8 | delay | 1.455 | 0.724 | 0.352 | 0.005 | 2.150 | 14.312 | **4.685** | **18.997** | 1.339 |
-| | | LIF | 1.413 | 0.704 | 0 | 0.003 | 5.028 | 13.898 | **7.148** | **21.046** | 0.797 |
-| | | MC | 2.028 | 2.816 | 0 | 0.014 | 5.569 | 15.333 | **10.426** | **25.760** | 0.999 |
-| **100** | 2×2 | delay | 2.857 | 1.448 | 0.704 | 0.161 | 0.086 | 28.046 | **5.256** | **33.302** | 41.989 |
-| | | LIF | 1.952 | 1.408 | 0 | 0.063 | 0.158 | 18.086 | **3.580** | **21.666** | 16.814 |
-| | | MC | 3.404 | 5.632 | 0 | 0.352 | 0.178 | 23.431 | **9.566** | **32.997** | 25.070 |
-| | 4×4 | delay | 2.857 | 1.448 | 0.704 | 0.040 | 0.593 | 28.046 | **5.642** | **33.688** | 10.497 |
-| | | LIF | 1.952 | 1.408 | 0 | 0.016 | 1.080 | 18.086 | **4.455** | **22.541** | 4.203 |
-| | | MC | 3.404 | 5.632 | 0 | 0.088 | 1.250 | 23.431 | **10.374** | **33.805** | 6.267 |
-| | 8×8 | delay | 2.857 | 1.448 | 0.704 | 0.010 | 4.270 | 28.046 | **9.289** | **37.335** | 2.624 |
-| | | LIF | 1.952 | 1.408 | 0 | 0.004 | 7.749 | 18.086 | **11.112** | **29.198** | 1.051 |
-| | | MC | 3.404 | 5.632 | 0 | 0.022 | 9.018 | 23.431 | **18.076** | **41.507** | 1.567 |
-| **140** | 2×2 | delay | 4.054 | 2.027 | 0.986 | 0.244 | 0.122 | 39.858 | **7.432** | **47.291** | 59.651 |
-| | | LIF | 2.784 | 1.971 | 0 | 0.090 | 0.221 | 25.893 | **5.066** | **30.959** | 24.051 |
-| | | MC | 4.457 | 7.885 | 0 | 0.447 | 0.240 | 29.372 | **13.028** | **42.400** | 31.820 |
-| | 4×4 | delay | 4.054 | 2.027 | 0.986 | 0.061 | 0.835 | 39.858 | **7.962** | **47.820** | 14.913 |
-| | | LIF | 2.784 | 1.971 | 0 | 0.023 | 1.519 | 25.893 | **6.297** | **32.190** | 6.013 |
-| | | MC | 4.457 | 7.885 | 0 | 0.112 | 1.661 | 29.372 | **14.114** | **43.486** | 7.955 |
-| | 8×8 | delay | 4.054 | 2.027 | 0.986 | 0.015 | 5.974 | 39.858 | **13.056** | **52.914** | 3.728 |
-| | | LIF | 2.784 | 1.971 | 0 | 0.006 | 10.941 | 25.893 | **15.701** | **41.594** | 1.503 |
-| | | MC | 4.457 | 7.885 | 0 | 0.028 | 11.933 | 29.372 | **24.303** | **53.674** | 1.989 |
+| **50** | 2×2 | delay | 4.062 | 0.724 | 0.352 | 0.212 | 0.044 | 43.280 | **5.393** | **48.673** | 63.694 |
+| | | LIF | 4.020 | 0.704 | 0.000 | 0.145 | 0.100 | 42.866 | **4.969** | **47.834** | 38.672 |
+| | | MC | 5.282 | 5.632 | 0.000 | 1.263 | 0.110 | 44.301 | **12.287** | **56.589** | 45.004 |
+| **50** | 4×4 | delay | 4.062 | 0.724 | 0.352 | 0.053 | 0.299 | 43.280 | **5.490** | **48.770** | 15.924 |
+| | | LIF | 4.020 | 0.704 | 0.000 | 0.036 | 0.694 | 42.866 | **5.454** | **48.320** | 9.668 |
+| | | MC | 5.282 | 5.632 | 0.000 | 0.316 | 0.772 | 44.301 | **12.002** | **56.303** | 11.251 |
+| **50** | 8×8 | delay | 4.062 | 0.724 | 0.352 | 0.013 | 2.150 | 43.280 | **7.300** | **50.580** | 3.981 |
+| | | LIF | 4.020 | 0.704 | 0.000 | 0.009 | 5.028 | 42.866 | **9.761** | **52.627** | 2.417 |
+| | | MC | 5.282 | 5.632 | 0.000 | 0.079 | 5.569 | 44.301 | **16.562** | **60.863** | 2.813 |
+| **100** | 2×2 | delay | 5.464 | 1.448 | 0.704 | 0.323 | 0.086 | 57.013 | **8.025** | **65.039** | 84.266 |
+| | | LIF | 4.559 | 1.408 | 0.000 | 0.160 | 0.158 | 47.053 | **6.285** | **53.338** | 42.734 |
+| | | MC | 7.307 | 11.264 | 0.000 | 1.556 | 0.178 | 52.399 | **20.304** | **72.703** | 55.428 |
+| **100** | 4×4 | delay | 5.464 | 1.448 | 0.704 | 0.081 | 0.593 | 57.013 | **8.290** | **65.303** | 21.067 |
+| | | LIF | 4.559 | 1.408 | 0.000 | 0.040 | 1.080 | 47.053 | **7.086** | **54.140** | 10.684 |
+| | | MC | 7.307 | 11.264 | 0.000 | 0.389 | 1.250 | 52.399 | **20.209** | **72.608** | 13.857 |
+| **100** | 8×8 | delay | 5.464 | 1.448 | 0.704 | 0.020 | 4.270 | 57.013 | **11.906** | **68.920** | 5.267 |
+| | | LIF | 4.559 | 1.408 | 0.000 | 0.010 | 7.749 | 47.053 | **13.726** | **60.779** | 2.671 |
+| | | MC | 7.307 | 11.264 | 0.000 | 0.097 | 9.018 | 52.399 | **27.685** | **80.084** | 3.464 |
+| **140** | 2×2 | delay | 6.661 | 2.027 | 0.986 | 0.416 | 0.122 | 68.826 | **10.212** | **79.038** | 101.929 |
+| | | LIF | 5.391 | 1.971 | 0.000 | 0.187 | 0.221 | 54.860 | **7.770** | **62.631** | 49.972 |
+| | | MC | 8.878 | 15.770 | 0.000 | 1.775 | 0.240 | 58.339 | **26.662** | **85.001** | 63.253 |
+| **140** | 4×4 | delay | 6.661 | 2.027 | 0.986 | 0.104 | 0.835 | 68.826 | **10.612** | **79.438** | 25.482 |
+| | | LIF | 5.391 | 1.971 | 0.000 | 0.047 | 1.519 | 54.860 | **8.928** | **63.789** | 12.493 |
+| | | MC | 8.878 | 15.770 | 0.000 | 0.444 | 1.661 | 58.339 | **26.752** | **85.091** | 15.813 |
+| **140** | 8×8 | delay | 6.661 | 2.027 | 0.986 | 0.026 | 5.974 | 68.826 | **15.674** | **84.500** | 6.371 |
+| | | LIF | 5.391 | 1.971 | 0.000 | 0.012 | 10.941 | 54.860 | **18.315** | **73.175** | 3.123 |
+| | | MC | 8.878 | 15.770 | 0.000 | 0.111 | 11.933 | 58.339 | **36.691** | **95.030** | 3.953 |
 
 **`weights leak` is reported separately and does not enter either total.**
 
 **Two regimes side by side.** `total (resident)` assumes the weights are spatially expanded, so a synaptic operation costs only the AC arithmetic (§4.4). `total (SRAM)` charges every synaptic operation one 10 pJ SRAM read of its 32-bit weight, $\text{w\_read} = \text{SOP} \times E_{access}$; this is an **upper bound** (weight reuse = 1, see §8.6). Criterion (a) under both regimes is tabulated in §6.1.
 
----
+**`synaptic` = input-layer SOP × E_AC + hidden SOP × E_AC + neuron ops × E_MAC.**
 
 ## 6. Criteria results
 
 ### 6.1 (a) Temporal-state share ≥ 10%
 
-**Under the white paper's reading ("a non-trivial share of energy in *at least one* brain-inspired model"), (a) holds in 9 of 9 configurations — in both weight regimes.**
+**Under the white paper's reading ("a non-trivial share of energy in *at least one* brain-inspired model"), (a) holds in 9 of 9 configurations without weight reads, and in 8 of 9 with them.**
 
 | T | Mesh | delay | LIF | MC | (a) | delay (SRAM) | LIF (SRAM) | MC (SRAM) | (a) SRAM |
 |---|---|---|---|---|---|---|---|---|---|
-| 50 | 2×2 | 43.4% | 33.2% | 58.7% | ✅ | **6.8%** | **4.7%** | **14.8%** | ✅ |
-| 50 | 4×4 | 38.4% | 25.4% | 50.6% | ✅ | **6.4%** | **4.3%** | **13.7%** | ✅ |
-| 50 | 8×8 | 23.1% | 9.9% | 27.1% | ✅ | **5.7%** | **3.4%** | **11.0%** | ✅ |
-| 100 | 2×2 | 44.0% | 41.1% | 62.6% | ✅ | **6.9%** | **6.8%** | **18.1%** | ✅ |
-| 100 | 4×4 | 38.9% | 32.0% | 55.1% | ✅ | **6.5%** | **6.3%** | **16.9%** | ✅ |
-| 100 | 8×8 | 23.3% | 12.7% | 31.3% | ✅ | **5.8%** | **4.8%** | **13.6%** | ✅ |
-| 140 | 2×2 | 43.8% | 40.7% | 64.0% | ✅ | **6.9%** | **6.7%** | **19.6%** | ✅ |
-| 140 | 4×4 | 38.6% | 31.7% | 56.7% | ✅ | **6.4%** | **6.2%** | **18.4%** | ✅ |
-| 140 | 8×8 | 23.2% | 12.6% | 32.6% | ✅ | **5.7%** | **4.8%** | **14.7%** | ✅ |
+| 50 | 2×2 | 23.9% | 17.1% | 56.1% | ✅ | **2.6%** | **1.8%** | **12.2%** | ✅ |
+| 50 | 4×4 | 20.6% | 13.6% | 49.6% | ✅ | **2.3%** | **1.5%** | **10.6%** | ✅ |
+| 50 | 8×8 | 14.9% | 7.3% | 34.5% | ✅ | **2.2%** | **1.4%** | **9.4%** | ❌ |
+| 100 | 2×2 | 30.8% | 25.0% | 63.1% | ✅ | **3.8%** | **2.9%** | **17.6%** | ✅ |
+| 100 | 4×4 | 26.9% | 20.4% | 57.7% | ✅ | **3.4%** | **2.7%** | **16.0%** | ✅ |
+| 100 | 8×8 | 18.2% | 10.3% | 41.0% | ✅ | **3.2%** | **2.3%** | **14.2%** | ✅ |
+| 140 | 2×2 | 33.6% | 27.8% | 65.8% | ✅ | **4.3%** | **3.4%** | **20.6%** | ✅ |
+| 140 | 4×4 | 29.4% | 22.6% | 60.6% | ✅ | **3.9%** | **3.2%** | **19.1%** | ✅ |
+| 140 | 8×8 | 19.4% | 10.8% | 43.3% | ✅ | **3.6%** | **2.7%** | **16.7%** | ✅ |
 
 **Left half is the weights-resident regime; right half charges one 10 pJ weight read per synaptic operation (§5.5).**
 
-**Once weight reads are charged, the multi-compartment model is the only one left above 10% — in all nine configurations (11.0–19.6%).** Its share drops from 27.1–64.0% to 11.0–19.6%, which is still a non-trivial share. **delay falls to 5.7–6.9% and plain LIF to 3.4–6.8%**, i.e. both are refuted as "temporal-state dominated".
+**Without weight reads the multi-compartment model stays at 34.5–65.8%.** delay is 14.9–33.6% and plain LIF 7.3–27.8%.
+
+**With weight reads, MC is the only model that stays above 10% in eight configurations (10.6–20.6%); the exception is T=50 at 8×8, where it reaches 9.4% — 0.6 point short.** delay falls to 2.2–4.3% and plain LIF to 1.4–3.4%.
 
 ### 6.2 (b) Ranking flips
 
 | T | Mesh | spike order | SOP order | energy order | spike≠E | SOP≠E | energy order (SRAM) | SOP≠E (SRAM) |
 |---|---|---|---|---|---|---|---|---|
-| 50 | 2×2 | DL<LIF<MC | LIF<DL<MC | LIF<DL<MC | **✅** | ❌ | **LIF<DL<MC** | ❌ |
-| 50 | 4×4 | DL<LIF<MC | LIF<DL<MC | LIF<DL<MC | **✅** | ❌ | **LIF<DL<MC** | ❌ |
-| 50 | 8×8 | DL<LIF<MC | LIF<DL<MC | **DL**<LIF<MC | ❌ | **✅** | **DL<LIF<MC** | **✅** |
-| 100 | 2×2 | DL<LIF<MC | LIF<MC<**DL** | LIF<**DL**<MC | **✅** | **✅** | **LIF<MC<DL** | ❌ |
-| 100 | 4×4 | DL<LIF<MC | LIF<MC<**DL** | LIF<**DL**<MC | **✅** | **✅** | **LIF<DL<MC** | **✅** |
-| 100 | 8×8 | DL<LIF<MC | LIF<MC<**DL** | **DL**<LIF<MC | ❌ | **✅** | **LIF<DL<MC** | **✅** |
-| 140 | 2×2 | DL<LIF<MC | LIF<MC<**DL** | LIF<**DL**<MC | **✅** | **✅** | **LIF<MC<DL** | ❌ |
-| 140 | 4×4 | DL<LIF<MC | LIF<MC<**DL** | LIF<**DL**<MC | **✅** | **✅** | **LIF<MC<DL** | ❌ |
-| 140 | 8×8 | DL<LIF<MC | LIF<MC<**DL** | **DL**<LIF<MC | ❌ | **✅** | **LIF<DL<MC** | **✅** |
+| 50 | 2×2 | DL<LIF<MC | LIF<DL<MC | LIF<DL<MC | ✅ | ❌ | **LIF<DL<MC** | ❌ |
+| 50 | 4×4 | DL<LIF<MC | LIF<DL<MC | LIF<DL<MC | ✅ | ❌ | **LIF<DL<MC** | ❌ |
+| 50 | 8×8 | DL<LIF<MC | LIF<DL<MC | DL<LIF<MC | ❌ | ✅ | **DL<LIF<MC** | ✅ |
+| 100 | 2×2 | DL<LIF<MC | LIF<MC<DL | LIF<DL<MC | ✅ | ✅ | **LIF<DL<MC** | ✅ |
+| 100 | 4×4 | DL<LIF<MC | LIF<MC<DL | LIF<DL<MC | ✅ | ✅ | **LIF<DL<MC** | ✅ |
+| 100 | 8×8 | DL<LIF<MC | LIF<MC<DL | DL<LIF<MC | ❌ | ✅ | **LIF<DL<MC** | ✅ |
+| 140 | 2×2 | DL<LIF<MC | LIF<MC<DL | LIF<DL<MC | ✅ | ✅ | **LIF<DL<MC** | ✅ |
+| 140 | 4×4 | DL<LIF<MC | LIF<MC<DL | LIF<DL<MC | ✅ | ✅ | **LIF<DL<MC** | ✅ |
+| 140 | 8×8 | DL<LIF<MC | LIF<MC<DL | DL<LIF<MC | ❌ | ✅ | **LIF<DL<MC** | ✅ |
 
-**At least one flip: 9/9 in both regimes** (resident: 6/9 spike, 7/9 SOP; in SRAM: 8/9 spike, 4/9 SOP).
+**At least one flip: 9/9 in both regimes** (resident: 6/9 spike, 7/9 SOP; in SRAM: 8/9 spike, 7/9 SOP).
 
-**Weight reads flip the ranking in 5 of 9 configurations:**
+**Weight reads flip the ranking in 2 of 9 configurations:**
 
 | Config | energy order (resident) | energy order (in SRAM) |
 |---|---|---|
-| T100-2×2 | LIF < **DL** < MC | LIF < **MC** < DL |
-| T100-8×8 | **DL** < LIF < MC | **LIF** < DL < MC |
-| T140-2×2 | LIF < **DL** < MC | LIF < **MC** < DL |
-| T140-4×4 | LIF < **DL** < MC | LIF < **MC** < DL |
-| T140-8×8 | **DL** < LIF < MC | **LIF** < DL < MC |
+| T100-8×8 | DL < LIF < MC | LIF < DL < MC |
+| T140-8×8 | DL < LIF < MC | LIF < DL < MC |
 
-**Mechanism.** The weight-read term is proportional to SOP, and the delay model's SOP is **55% higher** than plain LIF's (2.80 M vs 1.81 M at T=100). Once SOP carries a 10 pJ price, delay's communication advantage — 45% fewer flit-hops, worth only ~3.5 µJ at 8×8 — is wiped out. **The delay network's saving is a communication saving, not an operation saving**, and weight reads are charged per operation.
+**Mechanism.** The weight-read term is proportional to SOP, and the delay model's SOP is close to plain LIF's once the shared input layer is counted, while its communication advantage disappears with mesh size. Charging every synaptic operation for a weight fetch therefore reorders the models wherever SOP and communication disagree.
 
-**Note that weight reads make criterion (b) *weaker*, not stronger**: charging every operation for a weight fetch raises SOP's share of the total, so the SOP-only ranking moves *closer* to the full model. SOP≠E drops from 7/9 to 4/9 while spike≠E rises from 6/9 to 8/9. This is a limitation of the accounting, not of the models.
+**Note that weight reads make criterion (b) *weaker*, not stronger**: charging every operation for a weight fetch raises SOP's share of the total, so the SOP-only ranking moves *closer* to the full model. This is a limitation of the accounting, not of the models.
 
 ### 6.3 Summary
 
 | Criterion | weights resident | weights in SRAM |
 |---|---|---|
-| **(a) ts ≥ 10%** | **9/9** | **9/9** |
+| **(a) ts ≥ 10%** | **9/9** | **8/9** |
 | (b) spike ≠ energy | 6/9 | 8/9 |
-| (b) SOP ≠ energy | 7/9 | 4/9 |
+| (b) SOP ≠ energy | 7/9 | 7/9 |
 | **(b) at least one flip** | **9/9** | **9/9** |
-| Ranking affected by the weight term | — | **5/9 configurations** |
-
----
+| Ranking affected by the weight term | — | **2/9 configurations** |
 
 ## 7. Analysis
 
@@ -472,7 +475,7 @@ $$E_{LIF+inst} = \underbrace{N_{syn} N_{spikes/syn}(\cdots)}_{\text{event-driven
 | **state** | 1.448 | 1.408 | **5.632 (4.0×)** |
 | **leakage** | 0.161 | 0.063 | **0.352 (5.6×)** |
 
-**$d_{state}=4$ multiplies both state accesses and bits by 4, but SOP contains no such factor.**
+**$d_{state}=8$ multiplies both state accesses and bits by 8, but SOP contains no such factor.**
 
 ### 7.3 At large mesh, communication overtakes state
 

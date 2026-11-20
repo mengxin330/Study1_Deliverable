@@ -51,7 +51,7 @@ PMSN_RUNS = {
 ARCH = {
     "delay": dict(params=306612, neurons=724, d_state=1, n_delay=352),
     "lif":   dict(params=187988, neurons=704, d_state=1, n_delay=0),
-    "mc":    dict(params=200660, neurons=704, d_state=4, n_delay=0),
+    "mc":    dict(params=200660, neurons=704, d_state=8, n_delay=0),
 }
 ACC = {("delay", 50): 86.56, ("delay", 100): 87.24, ("delay", 140): 87.99,
        ("lif", 50): 88.96, ("lif", 100): 86.40, ("lif", 140): 87.10,
@@ -132,6 +132,11 @@ def measure_delay(T, times, units, tabs):
     with torch.no_grad():
         for i in range(N_TEST):
             x = bin_one(times[i], units[i], ts_ms, T)
+            # input -> hidden1 (140 channels -> 352 neurons): this layer is before
+            # the first spike_registrator, so nothing above counts it.  Every input
+            # event triggers 352 MACs, same spike-driven convention as the layers
+            # below (sop += spikes * fanout).
+            sop += int(round(float(x.sum()))) * 352
             dm.model(torch.from_numpy(x).unsqueeze(1).float())
             rows = {}
             for mi, key, fan in ((3, "hidden1", 352), (8, "hidden2", 372)):
@@ -175,6 +180,8 @@ def measure_pmsn(which, T, times, units, tabs):
         for i in range(N_TEST):
             captured.clear()
             x = bin_one(times[i], units[i], ts_ms, T)
+            # input -> hidden1 (140 -> 352): same correction as measure_delay().
+            sop += int(round(float(x.sum()))) * 352
             net(torch.from_numpy(x).unsqueeze(0).permute(0, 2, 1))
             rows = {}
             for k, v in captured.items():
