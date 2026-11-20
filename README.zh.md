@@ -41,7 +41,7 @@
 
 ### 延迟是 per-neuron 还是 per-synapse？
 
-**是 per-neuron。** `layers.7.recurrent_delays` 形状是 `(352,)` —— 每个**源**
+**是 per-presynaptic-neuron。** `layers.7.recurrent_delays` 形状是 `(352,)` —— 每个**源**
 神经元一个值，被它的所有出边共享（`delay_layers.py:124-126`："one delay per presynaptic
 neuron, shared by all its outgoing connections"；计算时按源索引，见
 `delay_layers_pytorch.py:168-170`）。即源神经元 `j` 的 spike 在 `t + 1 + d_j` 到达 `j` 的
