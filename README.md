@@ -39,6 +39,28 @@ White-paper wording:
 
 **Why PMSN uses the last epoch rather than best**: MC peaks at epoch 1 and drops ~1 point by epoch 2. Taking best would raise it by 1.5–2 points and widen the gap to LIF to 3–4 points, breaking matched accuracy.
 
+### Is the delay per neuron or per synapse?
+
+**Per presynaptic neuron.** `layers.7.recurrent_delays` is `(352,)` — one value per **source**
+neuron, shared by all its outgoing connections (`delay_layers.py:124-126`: "one delay per
+presynaptic neuron, shared by all its outgoing connections"; indexed per source at
+`delay_layers_pytorch.py:168-170`). So a spike from neuron `j` reaches all of `j`'s targets at
+`t + 1 + d_j`. The same file's `synaptic_recdel` (per-connection) and `common_recdel` (one
+scalar per layer) are the other two variants; we use `axonal_recdel`.
+
+### Do the feedforward layers carry delays?
+
+**No — the only delays are the second hidden layer's recurrent ones.** The checkpoint holds 18
+tensors: three `Linear`, two `BatchNorm`, and `layers.7.recurrent_{weights,delays}`. There is
+no `dcls` / `.P` entry, so no feedforward-delay layer was ever built; the first hidden layer is
+delay-free too (`no_delay_in_first_layer=True`).
+
+**This is the paper's SHD setup, not an omission**: DelRec reports SHD with *"vanilla LIF
+neurons with stateless (instantaneous) synapses"*.
+
+The `dcls`-only config keys (`max_feedforward_delay`, `no_delay_in_last_layer`, `DCLSversion`,
+`kernel_count`, paddings, position schedulers) therefore have no effect on this network.
+
 ### Three time-step resolutions
 
 Same 1.4 s span, different frame lengths:
@@ -244,7 +266,7 @@ Per the white paper's Study 1 Procedure (p.12):
 |---|---|---|
 | 1 | **synaptic operations** | $\text{SOP} \times E_{AC} + N_{neur} T d_{state} \times E_{MAC}$ |
 | 2 | **communication** | $fh \times E_{hop}$ |
-| 3 | **delay storage** | $N_{delay} \cdot T \cdot 2 \times E_{access}$ |
+| 3 | **delay storage** | $N_{delay} \cdot T \cdot 2 \times E_{access}$, with $N_{delay}=352$ (§1) |
 | 4 | **state memory** | $N_{neur} T d_{state} \cdot 2 \times E_{access}$ |
 | 5 | **leakage** | $bits_{state+buffer} \times P_{leak} \times t_{inf}$ |
 
@@ -331,6 +353,8 @@ $$E_{LIF+inst} = \underbrace{N_{syn} N_{spikes/syn}(\cdots)}_{\text{event-driven
 | MC | 6,421,120 | **180,224** | 0 |
 
 **MC's state bits are 704 × 8 × 32 (8 real values per neuron), twice the earlier figure.**
+
+**The 14,432 buffer bits are a per-neuron ring buffer: 352 neurons × 41 slots, one bit per slot (§1).**
 
 **Weights account for 99.6% of all bits and dominate leakage energy.**
 

@@ -39,6 +39,27 @@
 
 **为什么 PMSN 取最后一轮而不是 best**：MC 在第 1 轮达峰、第 2 轮回落约 1 点。取 best 会把它抬高 1.5–2 点，与 LIF 的差距拉大到 3–4 点，破坏 matched accuracy。
 
+### 延迟是 per-neuron 还是 per-synapse？
+
+**是 per-presynaptic-neuron。** `layers.7.recurrent_delays` 形状是 `(352,)` —— 每个**源**
+神经元一个值，被它的所有出边共享（`delay_layers.py:124-126`："one delay per presynaptic
+neuron, shared by all its outgoing connections"；计算时按源索引，见
+`delay_layers_pytorch.py:168-170`）。即源神经元 `j` 的 spike 在 `t + 1 + d_j` 到达 `j` 的
+全部目标。同文件的 `synaptic_recdel`（逐连接）与 `common_recdel`（整层一个标量）是另两个
+变体；我们用的是 `axonal_recdel`。
+
+### 前馈层有延迟吗？
+
+**没有——唯一的延迟在第二隐层的递归连接上。** checkpoint 共有 18 个张量：三个 `Linear`、
+两个 `BatchNorm`、以及 `layers.7.recurrent_{weights,delays}`。没有 `dcls` / `.P` 条目，说明
+带延迟的前馈层从未构建；第一隐层同样无延迟（`no_delay_in_first_layer=True`）。
+
+**这不是遗漏，是论文在 SHD 上的设置**：DelRec 的 SHD 结果用的就是 *"vanilla LIF neurons
+with stateless (instantaneous) synapses"*。
+
+因此那些只被 `dcls` 读取的配置项（`max_feedforward_delay`、`no_delay_in_last_layer`、
+`DCLSversion`、`kernel_count`、padding、位置调度）对这个网络全部无效。
+
 ### 三个时间分辨率
 
 同一 1.4 s 覆盖，帧长不同：
@@ -244,7 +265,7 @@ $$t_{inf} = \frac{\text{SOP} + N_{neur} \cdot T \cdot d_{state}}{n_{cores} \cdot
 |---|---|---|
 | 1 | **synaptic operations** | $\text{SOP} \times E_{AC} + N_{neur} T d_{state} \times E_{MAC}$ |
 | 2 | **communication** | $fh \times E_{hop}$ |
-| 3 | **delay storage** | $N_{delay} \cdot T \cdot 2 \times E_{access}$ |
+| 3 | **delay storage** | $N_{delay} \cdot T \cdot 2 \times E_{access}$，其中 $N_{delay}=352$（§1） |
 | 4 | **state memory** | $N_{neur} T d_{state} \cdot 2 \times E_{access}$ |
 | 5 | **leakage** | $bits_{state+buffer} \times P_{leak} \times t_{inf}$ |
 
@@ -333,6 +354,8 @@ $$E_{LIF+inst} = \underbrace{N_{syn} N_{spikes/syn}(\cdots)}_{\text{事件驱动
 | MC | 6,421,120 | **180,224** | 0 |
 
 **MC 的 state bits = 704 × 8 × 32（每神经元 8 个实数值），是上一版的两倍。**
+
+**14,432 个 buffer bits 是 per-neuron ring buffer：352 个神经元 × 41 slots，每 slot 1 bit（§1）。**
 
 **权重占全部 bits 的 99.6%，主导漏电能耗。**
 
