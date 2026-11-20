@@ -6,6 +6,11 @@
     "units": "energy in microjoules (uJ) per inference",
     "precision": "FP32 (32-bit floating point)",
     "note": "weights_leak reported separately, excluded from total",
+    "weight_read_modes": {
+      "resident": "weights spatially expanded; a synaptic operation costs only E_AC (Dampfhoffer 2023, L2372)",
+      "sram": "weights resident in SRAM; every synaptic operation also pays one E_access (10 pJ) to read its 32-bit weight. This is an UPPER bound: weight reuse would divide it.",
+      "fields": "total / ts_share = resident; total_sram / ts_share_sram = weights in SRAM"
+    },
     "prices": {
       "E_AC_pJ": 0.9,
       "E_MAC_pJ": 4.6,
@@ -55,9 +60,19 @@
         "lif",
         "mc"
       ],
+      "energy_order_sram": [
+        "lif",
+        "delay",
+        "mc"
+      ],
       "a": true,
+      "a_all": true,
+      "a_sram": true,
+      "a_all_sram": false,
       "b_sop": false,
       "b_spike": true,
+      "b_sop_sram": false,
+      "b_spike_sram": true,
       "models": {
         "delay": {
           "acc_pct": 86.56,
@@ -71,10 +86,13 @@
             "delay_storage": 0.352,
             "leakage_sb": 0.07131652442294274,
             "comm": 0.04363808966431096,
+            "weight_read": 14.312302756183746,
             "total": 2.6455818621437914,
+            "total_sram": 16.957884618327537,
             "weights_leak": 21.416750427392092
           },
-          "ts_share": 0.43367266038528063
+          "ts_share": 0.43367266038528063,
+          "ts_share_sram": 0.06765681865667136
         },
         "lif": {
           "acc_pct": 88.96,
@@ -88,10 +106,13 @@
             "delay_storage": 0.0,
             "leakage_sb": 0.04775195736537103,
             "comm": 0.10005506426678447,
+            "weight_read": 13.897891784452296,
             "total": 2.2645372822328618,
+            "total_sram": 16.16242906668516,
             "weights_leak": 12.751129206251946
           },
-          "ts_share": 0.33196713662586924
+          "ts_share": 0.33196713662586924,
+          "ts_share_sram": 0.04651231286236061
         },
         "mc": {
           "acc_pct": 91.21,
@@ -105,10 +126,13 @@
             "delay_storage": 0.0,
             "leakage_sb": 0.22440548579288197,
             "comm": 0.10983387257067137,
+            "weight_read": 15.333480689045937,
             "total": 5.177932620377687,
+            "total_sram": 20.51141330942362,
             "weights_leak": 15.990484651704438
           },
-          "ts_share": 0.5871852163211636
+          "ts_share": 0.5871852163211636,
+          "ts_share_sram": 0.14822993617880142
         }
       }
     },
@@ -130,9 +154,19 @@
         "lif",
         "mc"
       ],
+      "energy_order_sram": [
+        "lif",
+        "delay",
+        "mc"
+      ],
       "a": true,
+      "a_all": true,
+      "a_sram": true,
+      "a_all_sram": false,
       "b_sop": false,
       "b_spike": true,
+      "b_sop_sram": false,
+      "b_spike_sram": true,
       "models": {
         "delay": {
           "acc_pct": 86.56,
@@ -146,10 +180,13 @@
             "delay_storage": 0.352,
             "leakage_sb": 0.017829131105735686,
             "comm": 0.29897544169611306,
+            "weight_read": 14.312302756183746,
             "total": 2.8474318208583864,
+            "total_sram": 17.159734577042133,
             "weights_leak": 5.354187606848023
           },
-          "ts_share": 0.3841458549044346
+          "ts_share": 0.3841458549044346,
+          "ts_share_sram": 0.06374394232001471
         },
         "lif": {
           "acc_pct": 88.96,
@@ -163,10 +200,13 @@
             "delay_storage": 0.0,
             "leakage_sb": 0.011937989341342757,
             "comm": 0.6943735242932862,
+            "weight_read": 13.897891784452296,
             "total": 2.8230417742353358,
+            "total_sram": 16.720933558687634,
             "weights_leak": 3.1877823015629865
           },
-          "ts_share": 0.2536051700953896
+          "ts_share": 0.2536051700953896,
+          "ts_share_sram": 0.04281686706238752
         },
         "mc": {
           "acc_pct": 91.21,
@@ -180,10 +220,13 @@
             "delay_storage": 0.0,
             "leakage_sb": 0.05610137144822049,
             "comm": 0.7719799889575972,
+            "weight_read": 15.333480689045937,
             "total": 5.671774622419951,
+            "total_sram": 21.005255311465888,
             "weights_leak": 3.9976211629261096
           },
-          "ts_share": 0.506384961083449
+          "ts_share": 0.506384961083449,
+          "ts_share_sram": 0.13673251426182192
         }
       }
     },
@@ -205,9 +248,19 @@
         "lif",
         "mc"
       ],
-      "a": false,
+      "energy_order_sram": [
+        "delay",
+        "lif",
+        "mc"
+      ],
+      "a": true,
+      "a_all": false,
+      "a_sram": true,
+      "a_all_sram": false,
       "b_sop": true,
       "b_spike": false,
+      "b_sop_sram": true,
+      "b_spike_sram": false,
       "models": {
         "delay": {
           "acc_pct": 86.56,
@@ -221,10 +274,13 @@
             "delay_storage": 0.352,
             "leakage_sb": 0.004457282776433921,
             "comm": 2.149527924911661,
+            "weight_read": 14.312302756183746,
             "total": 4.684612455744633,
+            "total_sram": 18.99691521192838,
             "weights_leak": 1.3385469017120057
           },
-          "ts_share": 0.23063962984846142
+          "ts_share": 0.23063962984846142,
+          "ts_share_sram": 0.05687540691332889
         },
         "lif": {
           "acc_pct": 88.96,
@@ -238,10 +294,13 @@
             "delay_storage": 0.0,
             "leakage_sb": 0.0029844973353356894,
             "comm": 5.0282745408568905,
+            "weight_read": 13.897891784452296,
             "total": 7.1479892987929325,
+            "total_sram": 21.045881083245227,
             "weights_leak": 0.7969455753907466
           },
-          "ts_share": 0.0989067649352417
+          "ts_share": 0.0989067649352417,
+          "ts_share_sram": 0.03359253502093438
         },
         "mc": {
           "acc_pct": 91.21,
@@ -255,10 +314,13 @@
             "delay_storage": 0.0,
             "leakage_sb": 0.014025342862055123,
             "comm": 5.568667837676678,
+            "weight_read": 15.333480689045937,
             "total": 10.426386442552866,
+            "total_sram": 25.7598671315988,
             "weights_leak": 0.9994052907315274
           },
-          "ts_share": 0.2714291627741675
+          "ts_share": 0.2714291627741675,
+          "ts_share_sram": 0.10986179891396078
         }
       }
     },
@@ -280,9 +342,19 @@
         "lif",
         "mc"
       ],
+      "energy_order_sram": [
+        "lif",
+        "mc",
+        "delay"
+      ],
       "a": true,
+      "a_all": true,
+      "a_sram": true,
+      "a_all_sram": false,
       "b_sop": true,
       "b_spike": true,
+      "b_sop_sram": false,
+      "b_spike_sram": true,
       "models": {
         "delay": {
           "acc_pct": 87.24,
@@ -296,10 +368,13 @@
             "delay_storage": 0.704,
             "leakage_sb": 0.160908909569894,
             "comm": 0.08600195207597172,
+            "weight_read": 28.04569597173145,
             "total": 5.256063499101695,
+            "total_sram": 33.30175947083315,
             "weights_leak": 41.98859794131433
           },
-          "ts_share": 0.4400458460909365
+          "ts_share": 0.4400458460909365,
+          "ts_share_sram": 0.06945305432271892
         },
         "lif": {
           "acc_pct": 86.4,
@@ -313,10 +388,13 @@
             "delay_storage": 0.0,
             "leakage_sb": 0.06296549868415549,
             "comm": 0.15791342822438165,
+            "weight_read": 18.085837985865727,
             "total": 3.580444345636452,
+            "total_sram": 21.66628233150218,
             "weights_leak": 16.81357694124577
           },
-          "ts_share": 0.41083322534445926
+          "ts_share": 0.41083322534445926,
+          "ts_share_sram": 0.06789191962782706
         },
         "mc": {
           "acc_pct": 88.3,
@@ -330,10 +408,13 @@
             "delay_storage": 0.0,
             "leakage_sb": 0.3518197908223096,
             "comm": 0.17792404593639577,
+            "weight_read": 23.43105992932862,
             "total": 9.565899230398282,
+            "total_sram": 32.996959159726906,
             "weights_leak": 25.069658816194824
           },
-          "ts_share": 0.6255365697149592
+          "ts_share": 0.6255365697149592,
+          "ts_share_sram": 0.18134458274948007
         }
       }
     },
@@ -355,9 +436,19 @@
         "lif",
         "mc"
       ],
+      "energy_order_sram": [
+        "lif",
+        "delay",
+        "mc"
+      ],
       "a": true,
+      "a_all": true,
+      "a_sram": true,
+      "a_all_sram": false,
       "b_sop": true,
       "b_spike": true,
+      "b_sop_sram": true,
+      "b_spike_sram": true,
       "models": {
         "delay": {
           "acc_pct": 87.24,
@@ -371,10 +462,13 @@
             "delay_storage": 0.704,
             "leakage_sb": 0.0402272273924735,
             "comm": 0.5927992544169611,
+            "weight_read": 28.04569597173145,
             "total": 5.642179119265265,
+            "total_sram": 33.68787509099671,
             "weights_leak": 10.497149485328583
           },
-          "ts_share": 0.3885426501096175
+          "ts_share": 0.3885426501096175,
+          "ts_share_sram": 0.06507466622548597
         },
         "lif": {
           "acc_pct": 86.4,
@@ -388,10 +482,13 @@
             "delay_storage": 0.0,
             "leakage_sb": 0.015741374671038873,
             "comm": 1.0796771616607774,
+            "weight_read": 18.085837985865727,
             "total": 4.454983955059731,
+            "total_sram": 22.540821940925458,
             "weights_leak": 4.203394235311443
           },
-          "ts_share": 0.31958395115071736
+          "ts_share": 0.31958395115071736,
+          "ts_share_sram": 0.06316279763011093
         },
         "mc": {
           "acc_pct": 88.3,
@@ -405,10 +502,13 @@
             "delay_storage": 0.0,
             "leakage_sb": 0.0879549477055774,
             "comm": 1.2497367431537103,
+            "weight_read": 23.43105992932862,
             "total": 10.373847084498864,
+            "total_sram": 33.80490701382749,
             "weights_leak": 6.267414704048706
           },
-          "ts_share": 0.5513822308266553
+          "ts_share": 0.5513822308266553,
+          "ts_share_sram": 0.1692048715106922
         }
       }
     },
@@ -430,9 +530,19 @@
         "lif",
         "mc"
       ],
+      "energy_order_sram": [
+        "lif",
+        "delay",
+        "mc"
+      ],
       "a": true,
+      "a_all": true,
+      "a_sram": true,
+      "a_all_sram": false,
       "b_sop": true,
       "b_spike": false,
+      "b_sop_sram": true,
+      "b_spike_sram": true,
       "models": {
         "delay": {
           "acc_pct": 87.24,
@@ -446,10 +556,13 @@
             "delay_storage": 0.704,
             "leakage_sb": 0.010056806848118376,
             "comm": 4.270071474823322,
+            "weight_read": 28.04569597173145,
             "total": 9.28928091912727,
+            "total_sram": 37.33497689085873,
             "weights_leak": 2.6242873713321457
           },
-          "ts_share": 0.2327474888175999
+          "ts_share": 0.2327474888175999,
+          "ts_share_sram": 0.05790968648965434
         },
         "lif": {
           "acc_pct": 86.4,
@@ -463,10 +576,13 @@
             "delay_storage": 0.0,
             "leakage_sb": 0.003935343667759718,
             "comm": 7.748854882950529,
+            "weight_read": 18.085837985865727,
             "total": 11.112355645346204,
+            "total_sram": 29.19819363121193,
             "weights_leak": 1.0508485588278607
           },
-          "ts_share": 0.12705994918899766
+          "ts_share": 0.12705994918899766,
+          "ts_share_sram": 0.048356941580058786
         },
         "mc": {
           "acc_pct": 88.3,
@@ -480,10 +596,13 @@
             "delay_storage": 0.0,
             "leakage_sb": 0.02198873692639435,
             "comm": 9.017517602473497,
+            "weight_read": 23.43105992932862,
             "total": 18.075661733039468,
+            "total_sram": 41.506721662368086,
             "weights_leak": 1.5668536760121765
           },
-          "ts_share": 0.3127956707992489
+          "ts_share": 0.3127956707992489,
+          "ts_share_sram": 0.13621862942870194
         }
       }
     },
@@ -505,9 +624,19 @@
         "lif",
         "mc"
       ],
+      "energy_order_sram": [
+        "lif",
+        "mc",
+        "delay"
+      ],
       "a": true,
+      "a_all": true,
+      "a_sram": true,
+      "a_all_sram": false,
       "b_sop": true,
       "b_spike": true,
+      "b_sop_sram": false,
+      "b_spike_sram": true,
       "models": {
         "delay": {
           "acc_pct": 87.99,
@@ -521,10 +650,13 @@
             "delay_storage": 0.9856,
             "leakage_sb": 0.24357688600900354,
             "comm": 0.12243058436395761,
+            "weight_read": 39.85829673144876,
             "total": 7.432310176203351,
+            "total_sram": 47.29060690765211,
             "weights_leak": 59.651434642965334
           },
-          "ts_share": 0.4381379152386855
+          "ts_share": 0.4381379152386855,
+          "ts_share_sram": 0.06885885166092229
         },
         "lif": {
           "acc_pct": 87.1,
@@ -538,10 +670,13 @@
             "delay_storage": 0.0,
             "leakage_sb": 0.09007045167925373,
             "comm": 0.22121218970848056,
+            "weight_read": 25.892757667844524,
             "total": 5.066206831493742,
+            "total_sram": 30.958964499338265,
             "weights_leak": 24.051369418010722
           },
-          "ts_share": 0.4068666203806567
+          "ts_share": 0.4068666203806567,
+          "ts_share_sram": 0.06658072984719215
         },
         "mc": {
           "acc_pct": 88.96,
@@ -555,10 +690,13 @@
             "delay_storage": 0.0,
             "leakage_sb": 0.4465481073450517,
             "comm": 0.23950308613074206,
+            "weight_read": 29.371743321554774,
             "total": 13.027812092415724,
+            "total_sram": 42.3995554139705,
             "weights_leak": 31.81972415477914
           },
-          "ts_share": 0.6395047801000471
+          "ts_share": 0.6395047801000471,
+          "ts_share_sram": 0.1964961194994017
         }
       }
     },
@@ -580,9 +718,19 @@
         "lif",
         "mc"
       ],
+      "energy_order_sram": [
+        "lif",
+        "mc",
+        "delay"
+      ],
       "a": true,
+      "a_all": true,
+      "a_sram": true,
+      "a_all_sram": false,
       "b_sop": true,
       "b_spike": true,
+      "b_sop_sram": false,
+      "b_spike_sram": true,
       "models": {
         "delay": {
           "acc_pct": 87.99,
@@ -596,10 +744,13 @@
             "delay_storage": 0.9856,
             "leakage_sb": 0.060894221502250885,
             "comm": 0.8346313215547704,
+            "weight_read": 39.85829673144876,
             "total": 7.961828248887411,
+            "total_sram": 47.820124980336175,
             "weights_leak": 14.912858660741334
           },
-          "ts_share": 0.3860538214865123
+          "ts_share": 0.3860538214865123,
+          "ts_share_sram": 0.06427616453880383
         },
         "lif": {
           "acc_pct": 87.1,
@@ -613,10 +764,13 @@
             "delay_storage": 0.0,
             "leakage_sb": 0.022517612919813433,
             "comm": 1.5193220602915194,
+            "weight_read": 25.892757667844524,
             "total": 6.29676386331734,
+            "total_sram": 32.189521531161866,
             "weights_leak": 6.012842354502681
           },
-          "ts_share": 0.3166257551016783
+          "ts_share": 0.3166257551016783,
+          "ts_share_sram": 0.06193685143750104
         },
         "mc": {
           "acc_pct": 88.96,
@@ -630,10 +784,13 @@
             "delay_storage": 0.0,
             "leakage_sb": 0.11163702683626292,
             "comm": 1.6610099863074206,
+            "weight_read": 29.371743321554774,
             "total": 14.114407912083612,
+            "total_sram": 43.48615123363838,
             "weights_leak": 7.954931038694785
           },
-          "ts_share": 0.5665442770709752
+          "ts_share": 0.5665442770709752,
+          "ts_share_sram": 0.1838846805244673
         }
       }
     },
@@ -655,9 +812,19 @@
         "lif",
         "mc"
       ],
+      "energy_order_sram": [
+        "lif",
+        "delay",
+        "mc"
+      ],
       "a": true,
+      "a_all": true,
+      "a_sram": true,
+      "a_all_sram": false,
       "b_sop": true,
       "b_spike": false,
+      "b_sop_sram": true,
+      "b_spike_sram": true,
       "models": {
         "delay": {
           "acc_pct": 87.99,
@@ -671,10 +838,13 @@
             "delay_storage": 0.9856,
             "leakage_sb": 0.015223555375562721,
             "comm": 5.974480992712015,
+            "weight_read": 39.85829673144876,
             "total": 13.056007253917967,
+            "total_sram": 52.91430398536673,
             "weights_leak": 3.7282146651853334
           },
-          "ts_share": 0.23192569492996304
+          "ts_share": 0.23192569492996304,
+          "ts_share_sram": 0.05722504743165387
         },
         "lif": {
           "acc_pct": 87.1,
@@ -688,10 +858,13 @@
             "delay_storage": 0.0,
             "leakage_sb": 0.005629403229953358,
             "comm": 10.940837518992932,
+            "weight_read": 25.892757667844524,
             "total": 15.701391112328894,
+            "total_sram": 41.59414878017342,
             "weights_leak": 1.5032105886256701
           },
-          "ts_share": 0.12590154522536073
+          "ts_share": 0.12590154522536073,
+          "ts_share_sram": 0.04752662240252994
         },
         "mc": {
           "acc_pct": 88.96,
@@ -705,18 +878,27 @@
             "delay_storage": 0.0,
             "leakage_sb": 0.02790925670906573,
             "comm": 11.932923090106007,
+            "weight_read": 29.371743321554774,
             "total": 24.302593245755002,
+            "total_sram": 53.67433656730977,
             "weights_leak": 1.9887327596736963
           },
-          "ts_share": 0.3255911489236318
+          "ts_share": 0.3255911489236318,
+          "ts_share_sram": 0.14742071840582902
         }
       }
     }
   },
   "summary": {
-    "a_holds": "8/9",
+    "a_holds": "9/9",
+    "a_holds_sram": "9/9",
+    "a_all_holds": "8/9",
+    "a_all_holds_sram": "0/9",
     "b_sop_flip": "7/9",
     "b_spike_flip": "6/9",
-    "b_either_flip": "9/9"
+    "b_either_flip": "9/9",
+    "b_sop_flip_sram": "4/9",
+    "b_spike_flip_sram": "8/9",
+    "b_either_flip_sram": "9/9"
   }
 }
